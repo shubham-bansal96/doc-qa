@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
 	"strings"
 
 	"doc-qa/ingest"
+	"doc-qa/query"
 )
 
 func main() {
@@ -23,7 +25,14 @@ func main() {
 
 	switch os.Args[1] {
 	case "ingest":
+		fmt.Println("handling ingestion")
 		handleIngest(ctx, cfg)
+	case "query":
+		handleQuery(ctx, cfg)
+		fmt.Println("handling query")
+	case "search":
+		handleSearch(ctx, cfg)
+		fmt.Println("handling search")
 	default:
 		printUsage()
 		os.Exit(1)
@@ -72,5 +81,103 @@ func handleIngest(ctx context.Context, cfg appConfig) {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
+	}
+}
+func handleQuery(ctx context.Context, cfg appConfig) {
+	queryCfg := query.Config{
+		QdrantURL:      cfg.qdrantURL,
+		OllamaURL:      cfg.ollamaURL,
+		EmbeddingModel: cfg.embeddingModel,
+		AnthropicURL:   cfg.anthropicURL,
+		AnthropicToken: cfg.anthropicToken,
+		AnthropicModel: cfg.anthropicModel,
+	}
+
+	if len(os.Args) >= 3 {
+		question := strings.Join(os.Args[2:], " ")
+		askQuestion(ctx, queryCfg, question)
+		return
+	}
+
+	session, err := query.NewSession(queryCfg)
+	if err != nil {
+		fmt.Printf("Error creating session: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("RAG Query Mode (with conversation memory)")
+	fmt.Println("Follow-up questions will use context from previous answers.")
+	fmt.Println("Type 'exit' to quit")
+	fmt.Println()
+
+	scanner := bufio.NewScanner(os.Stdin)
+	for {
+		fmt.Print("Question: ")
+		if !scanner.Scan() {
+			break
+		}
+		question := strings.TrimSpace(scanner.Text())
+		if question == "" {
+			continue
+		}
+		if question == "exit" || question == "quit" {
+			break
+		}
+
+		result, err := session.Query(ctx, question)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+		} else {
+			fmt.Printf("\nAnswer: %s\n", result.Answer)
+			if len(result.Sources) > 0 {
+				unique := uniqueStrings(result.Sources)
+				fmt.Printf("\nSources: %s\n", strings.Join(unique, ", "))
+			}
+		}
+		fmt.Println()
+	}
+}
+func handleSearch(ctx context.Context, cfg appConfig) {
+	if len(os.Args) < 3 {
+		fmt.Println("Usage: ai-rag search <query>")
+		os.Exit(1)
+	}
+
+	searchQuery := strings.Join(os.Args[2:], " ")
+
+	queryCfg := query.Config{
+		QdrantURL:      cfg.qdrantURL,
+		OllamaURL:      cfg.ollamaURL,
+		EmbeddingModel: cfg.embeddingModel,
+	}
+
+	results, err := query.SearchDocuments(ctx, queryCfg, searchQuery)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(results) == 0 {
+		fmt.Println("No relevant documents found.")
+		return
+	}
+
+	fmt.Printf("Found %d relevant chunks:\n\n", len(results))
+	for i, result := range results {
+		fmt.Printf("--- Chunk %d ---\n%s\n\n", i+1, result)
+	}
+}
+
+func askQuestion(ctx context.Context, cfg query.Config, question string) {
+	result, err := query.Query(ctx, cfg, question)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+
+	fmt.Printf("\nAnswer: %s\n", result.Answer)
+	if len(result.Sources) > 0 {
+		unique := uniqueStrings(result.Sources)
+		fmt.Printf("\nSources: %s\n", strings.Join(unique, ", "))
 	}
 }

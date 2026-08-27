@@ -66,3 +66,14 @@ func printUsage() {
 	fmt.Println("  - Ollama vision model for images (ollama pull llava)")
 	fmt.Println("  - Qdrant running (docker run -d -p 6333:6333 -p 6334:6334 qdrant/qdrant)")
 }
+func uniqueStrings(s []string) []string {
+	seen := make(map[string]bool)
+	var result []string
+	for _, v := range s {
+		if !seen[v] {
+			seen[v] = true
+			result = append(result, v)
+		}
+	}
+	return result
+}

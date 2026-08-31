@@ -26,6 +26,5 @@ func ocrImage(path string) (string, error) {
 		return "", fmt.Errorf("extracting text: %w", err)
 	}
 
-	fmt.Println("text extracted from image successfully")
 	return text, nil
 }

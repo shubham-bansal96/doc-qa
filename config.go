@@ -15,6 +15,7 @@ type appConfig struct {
 	anthropicModel string
 }
 
+// loadConfig reads environment variables and returns the application configuration
 func loadConfig() appConfig {
 	cfg := appConfig{
 		qdrantURL:      getEnv("QDRANT_URL", "http://localhost:6333"),
@@ -34,12 +35,14 @@ func loadConfig() appConfig {
 	return cfg
 }
 
+// getEnv returns the value of an environment variable or a default if unset
 func getEnv(key, defaultVal string) string {
 	if val := os.Getenv(key); val != "" {
 		return val
 	}
 	return defaultVal
 }
+// printUsage prints the CLI help text with available commands and configuration
 func printUsage() {
 	fmt.Println("AI RAG - Retrieval Augmented Generation CLI")
 	fmt.Println()
@@ -66,6 +69,7 @@ func printUsage() {
 	fmt.Println("  - Ollama vision model for images (ollama pull llava)")
 	fmt.Println("  - Qdrant running (docker run -d -p 6333:6333 -p 6334:6334 qdrant/qdrant)")
 }
+// uniqueStrings deduplicates a string slice while preserving order
 func uniqueStrings(s []string) []string {
 	seen := make(map[string]bool)
 	var result []string

@@ -39,6 +39,7 @@ type Result struct {
 	Sources []string
 }
 
+// Query runs a one-shot RAG query and returns the answer with source references
 func Query(ctx context.Context, cfg Config, question string) (*Result, error) {
 	if cfg.TopK == 0 {
 		cfg.TopK = 3
@@ -99,6 +100,7 @@ type Session struct {
 	llm    *anthropic.LLM
 }
 
+// NewSession creates a new interactive query session with conversation memory
 func NewSession(cfg Config) (*Session, error) {
 	llm, err := createLLM(cfg)
 	if err != nil {
@@ -112,6 +114,7 @@ func NewSession(cfg Config) (*Session, error) {
 	}, nil
 }
 
+// Query answers a question using conversation history and retrieved document context
 func (s *Session) Query(ctx context.Context, question string) (*Result, error) {
 	searchQuery, err := s.rewriteWithContext(ctx, question)
 	if err != nil {
@@ -184,6 +187,7 @@ Answer:`, historyStr, combinedContext, question)
 	}, nil
 }
 
+// rewriteWithContext rewrites a follow-up question into a standalone query using conversation history
 func (s *Session) rewriteWithContext(ctx context.Context, question string) (string, error) {
 	history, err := s.memory.LoadMemoryVariables(ctx, map[string]any{})
 	if err != nil {
@@ -218,10 +222,12 @@ Standalone question:`, historyStr, question)
 	return rewritten, nil
 }
 
+// saveToMemory stores a question-answer pair in the conversation buffer
 func (s *Session) saveToMemory(ctx context.Context, question, answer string) {
 	_ = s.memory.SaveContext(ctx, map[string]any{"input": question}, map[string]any{"output": answer})
 }
 
+// SearchDocuments performs a similarity search and returns matching text chunks
 func SearchDocuments(ctx context.Context, cfg Config, queryText string) ([]string, error) {
 	if cfg.TopK == 0 {
 		cfg.TopK = 5
@@ -247,6 +253,7 @@ func SearchDocuments(ctx context.Context, cfg Config, queryText string) ([]strin
 	return results, nil
 }
 
+// createVectorStore initializes a Qdrant vector store with Ollama embeddings
 func createVectorStore(cfg Config) (qdrant.Store, error) {
 	ollamaModel := cfg.EmbeddingModel
 	if ollamaModel == "" {
@@ -301,7 +308,7 @@ func ensureCollection(qdrantURL, name string, dimension int) error {
 	if err != nil {
 		return fmt.Errorf("checking collection: %w", err)
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
 		return nil
@@ -334,6 +341,7 @@ func ensureCollection(qdrantURL, name string, dimension int) error {
 	return nil
 }
 
+// createLLM creates an Anthropic LLM client with the configured token and model
 func createLLM(cfg Config) (*anthropic.LLM, error) {
 	opts := []anthropic.Option{
 		anthropic.WithToken(cfg.AnthropicToken),

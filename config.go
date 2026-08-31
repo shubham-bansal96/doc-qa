@@ -15,6 +15,7 @@ type appConfig struct {
 	anthropicModel string
 }
 
+// loadConfig reads environment variables and returns the application configuration
 func loadConfig() appConfig {
 	cfg := appConfig{
 		qdrantURL:      getEnv("QDRANT_URL", "http://localhost:6333"),
@@ -34,21 +35,23 @@ func loadConfig() appConfig {
 	return cfg
 }
 
+// getEnv returns the value of an environment variable or a default if unset
 func getEnv(key, defaultVal string) string {
 	if val := os.Getenv(key); val != "" {
 		return val
 	}
 	return defaultVal
 }
+// printUsage prints the CLI help text with available commands and configuration
 func printUsage() {
 	fmt.Println("AI RAG - Retrieval Augmented Generation CLI")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Println("  ai-rag ingest <file1> [file2] ...   - Ingest files into vector database")
-	fmt.Println("  ai-rag ingest --dir <directory>     - Ingest all files in a directory")
-	fmt.Println("  ai-rag ingest --text \"<text>\"        - Ingest raw text")
-	fmt.Println("  ai-rag query [question]             - Ask a question (interactive if no question given)")
-	fmt.Println("  ai-rag search <query>               - Search for similar documents")
+	fmt.Println("  doc-qa ingest <file1> [file2] ...   - Ingest files into vector database")
+	fmt.Println("  doc-qa ingest --dir <directory>     - Ingest all files in a directory")
+	fmt.Println("  doc-qa ingest --text \"<text>\"        - Ingest raw text")
+	fmt.Println("  doc-qa query [question]             - Ask a question (interactive if no question given)")
+	fmt.Println("  doc-qa search <query>               - Search for similar documents")
 	fmt.Println()
 	fmt.Println("Environment Variables:")
 	fmt.Println("  ANTHROPIC_AUTH_TOKEN - Required for query: Anthropic API key for LLM")
@@ -66,6 +69,7 @@ func printUsage() {
 	fmt.Println("  - Ollama vision model for images (ollama pull llava)")
 	fmt.Println("  - Qdrant running (docker run -d -p 6333:6333 -p 6334:6334 qdrant/qdrant)")
 }
+// uniqueStrings deduplicates a string slice while preserving order
 func uniqueStrings(s []string) []string {
 	seen := make(map[string]bool)
 	var result []string

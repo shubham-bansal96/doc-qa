@@ -38,6 +38,7 @@ type Config struct {
 	ChunkOverlap   int
 }
 
+// IngestFiles loads, chunks, and stores multiple files into the vector database
 func IngestFiles(ctx context.Context, cfg Config, filePaths []string) error {
 	if cfg.ChunkSize == 0 {
 		cfg.ChunkSize = DefaultChunkSize
@@ -83,6 +84,7 @@ func IngestFiles(ctx context.Context, cfg Config, filePaths []string) error {
 	return nil
 }
 
+// IngestText splits raw text into chunks and stores them in the vector database
 func IngestText(ctx context.Context, cfg Config, text string, source string) error {
 	if cfg.ChunkSize == 0 {
 		cfg.ChunkSize = DefaultChunkSize
@@ -127,6 +129,7 @@ func IngestText(ctx context.Context, cfg Config, text string, source string) err
 	return nil
 }
 
+// IngestDirectory walks a directory for supported files and ingests them all
 func IngestDirectory(ctx context.Context, cfg Config, dirPath string) error {
 	var filePaths []string
 	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
@@ -156,6 +159,7 @@ func IngestDirectory(ctx context.Context, cfg Config, dirPath string) error {
 	return IngestFiles(ctx, cfg, filePaths)
 }
 
+// loadFile dispatches file loading to the appropriate handler based on extension
 func (cfg Config) loadFile(ctx context.Context, path string, chunkSize, chunkOverlap int) ([]schema.Document, error) {
 	ext := strings.ToLower(filepath.Ext(path))
 
@@ -169,6 +173,7 @@ func (cfg Config) loadFile(ctx context.Context, path string, chunkSize, chunkOve
 	}
 }
 
+// loadTextFile loads a text-based file and splits it into chunked documents
 func loadTextFile(ctx context.Context, path, ext string, chunkSize, chunkOverlap int) ([]schema.Document, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -208,6 +213,7 @@ func loadTextFile(ctx context.Context, path, ext string, chunkSize, chunkOverlap
 	return docs, nil
 }
 
+// loadPDF extracts text from a PDF, falling back to OCR for scanned documents
 func loadPDF(ctx context.Context, path, ext string, chunkSize, chunkOverlap int) ([]schema.Document, error) {
 	// Try text extraction first (works for text-based PDFs).
 	docs, err := extractPDFText(ctx, path, ext, chunkSize, chunkOverlap)
@@ -225,6 +231,7 @@ func loadPDF(ctx context.Context, path, ext string, chunkSize, chunkOverlap int)
 	return ocrPDF(ctx, path, ext, chunkSize, chunkOverlap)
 }
 
+// extractPDFText reads text directly from a digital PDF and splits it into chunks
 func extractPDFText(ctx context.Context, path, ext string, chunkSize, chunkOverlap int) ([]schema.Document, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -260,8 +267,7 @@ func extractPDFText(ctx context.Context, path, ext string, chunkSize, chunkOverl
 	return docs, nil
 }
 
-// ocrPDF renders each page of an image-based PDF to a PNG using pdftoppm,
-// then runs Tesseract OCR on each page image.
+// ocrPDF renders PDF pages to images via pdftoppm and OCRs each page
 func ocrPDF(ctx context.Context, path, ext string, chunkSize, chunkOverlap int) ([]schema.Document, error) {
 	if _, err := exec.LookPath("pdftoppm"); err != nil {
 		return nil, fmt.Errorf("pdftoppm not found — install poppler: brew install poppler")
@@ -331,6 +337,7 @@ func ocrPDF(ctx context.Context, path, ext string, chunkSize, chunkOverlap int) 
 	return docs, nil
 }
 
+// loadImage extracts text from an image via OCR, falling back to the vision model
 func (cfg Config) loadImage(ctx context.Context, path, ext string) ([]schema.Document, error) {
 	// Try Tesseract OCR first — accurate for documents, invoices, receipts, handwritten text.
 	// Fall back to Llava only when OCR yields too little text (e.g. photos with no readable text).
@@ -408,6 +415,7 @@ func (cfg Config) loadImage(ctx context.Context, path, ext string) ([]schema.Doc
 	}}, nil
 }
 
+// imageMediaType maps a file extension to its MIME media type
 func imageMediaType(ext string) string {
 	switch ext {
 	case ".png":
@@ -421,6 +429,7 @@ func imageMediaType(ext string) string {
 	}
 }
 
+// createVectorStore initializes a Qdrant vector store with Ollama embeddings
 func createVectorStore(cfg Config) (qdrant.Store, error) {
 	ollamaModel := cfg.EmbeddingModel
 	if ollamaModel == "" {
@@ -475,7 +484,7 @@ func ensureCollection(qdrantURL, name string, dimension int) error {
 	if err != nil {
 		return fmt.Errorf("checking collection: %w", err)
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
 		return nil

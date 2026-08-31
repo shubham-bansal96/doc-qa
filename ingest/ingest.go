@@ -484,7 +484,7 @@ func ensureCollection(qdrantURL, name string, dimension int) error {
 	if err != nil {
 		return fmt.Errorf("checking collection: %w", err)
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
 		return nil

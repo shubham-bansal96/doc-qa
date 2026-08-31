@@ -20,7 +20,7 @@ func main() {
 
 	cfg := loadConfig()
 
-	fmt.Println("config loaded successfully", cfg)
+	fmt.Println("config loaded successfully")
 
 	ctx := context.Background()
 
@@ -29,11 +29,11 @@ func main() {
 		fmt.Println("handling ingestion")
 		handleIngest(ctx, cfg)
 	case "query":
-		handleQuery(ctx, cfg)
 		fmt.Println("handling query")
+		handleQuery(ctx, cfg)
 	case "search":
-		handleSearch(ctx, cfg)
 		fmt.Println("handling search")
+		handleSearch(ctx, cfg)
 	default:
 		printUsage()
 		os.Exit(1)
@@ -44,9 +44,9 @@ func main() {
 func handleIngest(ctx context.Context, cfg appConfig) {
 	if len(os.Args) < 3 {
 		fmt.Println("Usage:")
-		fmt.Println("  ai-rag ingest <file1> [file2] ...   - Ingest specific files")
-		fmt.Println("  ai-rag ingest --dir <directory>     - Ingest all supported files in a directory")
-		fmt.Println("  ai-rag ingest --text \"<text>\"        - Ingest raw text")
+		fmt.Println("  doc-qa ingest <file1> [file2] ...   - Ingest specific files")
+		fmt.Println("  doc-qa ingest --dir <directory>     - Ingest all supported files in a directory")
+		fmt.Println("  doc-qa ingest --text \"<text>\"        - Ingest raw text")
 		os.Exit(1)
 	}
 
@@ -85,6 +85,7 @@ func handleIngest(ctx context.Context, cfg appConfig) {
 		}
 	}
 }
+
 // handleQuery starts a single question or interactive RAG query session
 func handleQuery(ctx context.Context, cfg appConfig) {
 	queryCfg := query.Config{
@@ -140,10 +141,11 @@ func handleQuery(ctx context.Context, cfg appConfig) {
 		fmt.Println()
 	}
 }
+
 // handleSearch runs a similarity search and prints matching document chunks
 func handleSearch(ctx context.Context, cfg appConfig) {
 	if len(os.Args) < 3 {
-		fmt.Println("Usage: ai-rag search <query>")
+		fmt.Println("Usage: doc-qa search <query>")
 		os.Exit(1)
 	}
 
